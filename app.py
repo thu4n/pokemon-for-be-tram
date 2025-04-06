@@ -18,10 +18,10 @@ async def add_message(
 
 async def main() -> None:
     load_dotenv()
-
+    st.set_page_config(page_title="PokeStory", page_icon="pokeball.png")
     st.title("📚 PokeStory")
     with st.sidebar:
-        st.markdown("## Pokemon của bạn")
+        st.markdown("## ℹ️ Pokemon của bạn")
     agent = get_agent()
 
     # Initialize chat history
