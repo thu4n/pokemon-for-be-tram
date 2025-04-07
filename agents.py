@@ -1,8 +1,7 @@
-from agno.agent import Agent
 from textwrap import dedent
-from agno.models.google import Gemini
 from agno.agent import Agent
 from agno.models.google import Gemini
+from agno.models.azure import AzureOpenAI
 from agno.tools.duckduckgo import DuckDuckGoTools
 from agno.storage.agent.sqlite import SqliteAgentStorage
 from pathlib import Path
@@ -16,14 +15,18 @@ output_dir.mkdir(parents=True, exist_ok=True)
 tmp_dir = cwd.joinpath("tmp")
 tmp_dir.mkdir(parents=True, exist_ok=True)
 
-agent_storage = SqliteAgentStorage(
-    table_name="pokemon_adventure_story",
-    db_file=str(tmp_dir.joinpath("agents.db")), 
-)
+# observer_storage = SqliteAgentStorage(
+#     table_name="pokemon_observer_data",  # Tên bảng khác
+#     db_file=str(tmp_dir.joinpath("observer_agents.db")), # File DB khác
+# )
 
 def get_agent():
+    agent_storage = SqliteAgentStorage(
+    table_name="pokemon_adventure_story",
+    db_file=str(tmp_dir.joinpath("agents.db")), 
+    )
     agent = Agent(
-        model=Gemini(id="gemini-2.0-flash-lite"),
+        model=AzureOpenAI(id="gpt-4o-mini"),
         description=dedent("""\
         Bạn là một người kể chuyện tài ba, chuyên dẫn dắt những cuộc phiêu lưu lấy cảm hứng từ thế giới Pokémon. Để đảm bảo tính chính xác và phong phú, bạn sẽ chủ động tìm kiếm thông tin chi tiết về các loài Pokémon khi cần thiết.
 
@@ -63,3 +66,53 @@ def get_agent():
     )
 
     return agent
+
+def get_observer():
+    observer = Agent(
+        model=Gemini(id="gemini-2.0-flash"),
+        description=dedent("""\
+        Bạn là một nhà quan sát viên chuyên theo dõi đội hình Pokémon của người chơi trong cuộc phiêu lưu.
+        Bạn sẽ phân tích nội dung của câu chuyện (lời thoại của người kể chuyện) để cập nhật chính xác danh sách Pokémon hiện tại mà người chơi đang sở hữu.
+
+        Dựa trên nội dung này, bạn sẽ trả lời bằng một dòng duy nhất chứa tên tiếng Anh của tất cả Pokémon hiện có trong đội của người chơi,
+        các tên Pokémon được phân tách bằng dấu phẩy. Nếu Pokémon được nhắc đến bằng tên tiếng Nhật, bạn phải tự tra cứu và chuyển đổi sang tên tiếng Anh tương ứng.
+
+        Bạn cần phải theo dõi các sự kiện như bắt Pokémon mới, Pokémon tiến hóa, trao đổi Pokémon, hoặc người chơi để lại Pokémon ở trung tâm Pokémon để đảm bảo danh sách luôn được cập nhật chính xác.
+        Chỉ liệt kê tên các Pokémon đang thuộc sở hữu của người chơi ở thời điểm hiện tại, dựa trên nội dung câu chuyện bạn nhận được.
+        """),
+        instructions=dedent("""\
+        Quy trình làm việc:
+
+        1. Phân tích Nội dung Câu chuyện: Bạn sẽ nhận được nội dung của câu chuyện (phản hồi mới nhất từ người kể chuyện). Hãy đọc và phân tích nội dung này để xác định các sự kiện liên quan đến Pokémon của người chơi.
+
+        2. Xác định Các Sự Kiện Quan Trọng: Trong nội dung câu chuyện, hãy chú ý đến các sự kiện sau:
+            * Bắt Pokémon mới: Các câu nói như "Tôi đã bắt được một con...", "Bạn đã bắt được...", "ném Poké Ball..." thường chỉ ra việc thêm Pokémon vào đội.
+            * Nhận Pokémon: Các tình huống như Giáo sư Oak tặng Pokémon, nhận trứng nở thành Pokémon.
+            * Sử dụng Pokémon: Mặc dù không trực tiếp thay đổi đội hình, nhưng có thể giúp xác nhận Pokémon đang có.
+            * Tiến hóa Pokémon: Các câu nói như "... đã tiến hóa thành ...". Bạn cần cập nhật tên Pokémon trong đội.
+            * Trao đổi Pokémon: Các câu nói như "Tôi đã đổi ... lấy ...". Bạn cần loại bỏ Pokémon đã đổi và thêm Pokémon mới.
+            * Để lại/Gửi Pokémon: Các câu nói như "Tôi để lại ... ở Trung tâm Pokémon", "Bạn gửi ... vào PC". Bạn cần loại bỏ Pokémon này khỏi đội.
+            * Đội hình hiện tại được nhắc đến trực tiếp: Đôi khi người kể chuyện có thể liệt kê các Pokémon trong đội.
+
+        3. Theo dõi Đội hình Hiện Tại: Dựa trên các sự kiện đã xác định trong nội dung câu chuyện, bạn cần duy trì một danh sách ảo về các Pokémon mà người chơi đang sở hữu. Hãy cập nhật danh sách này.
+
+        4. Xử lý Tên Pokémon:
+            * Ưu tiên tên tiếng Anh: Nếu tên tiếng Anh được sử dụng, hãy giữ nguyên.
+            * Tra cứu tên tiếng Nhật: Nếu tên tiếng Nhật được sử dụng (ví dụ: Fushigidane, Hitokage, Zenigame), bạn phải sử dụng công cụ `DuckDuckGoTools` để tra cứu tên tiếng Anh tương ứng. Ví dụ: tìm kiếm "tên tiếng anh của Fushigidane".
+            * Đảm bảo nhất quán: Luôn sử dụng tên tiếng Anh đã tra cứu cho các Pokémon.
+
+        5. Định dạng Output: Bạn phải trả lời bằng một dòng duy nhất. Dòng này chứa tên tiếng Anh của tất cả Pokémon trong đội, với mỗi tên được phân tách bằng dấu phẩy. Tuyệt đối không thêm bất kỳ thông tin, giải thích, hay lời chào nào khác. Chỉ đưa ra danh sách tên Pokémon.
+
+        Ví dụ:
+
+        Nếu nội dung câu chuyện cho thấy người chơi đã bắt Pikachu, nhận Bulbasaur (Fushigidane), và sau đó trao đổi Pikachu lấy Charmander (Hitokage), output của bạn sẽ là: Pikachu, Bulbasaur (sau đó cập nhật thành Bulbasaur, Charmander).
+
+        Quan trọng: Hãy đảm bảo bạn xử lý các trường hợp không chắc chắn một cách cẩn thận và chỉ liệt kê những Pokémon mà bạn có bằng chứng rõ ràng là đang thuộc sở hữu của người chơi dựa trên nội dung câu chuyện bạn vừa nhận được. Chỉ trả lời bằng danh sách tên Pokémon, không có gì khác.
+        """),
+        tools=[DuckDuckGoTools()],
+        add_history_to_messages=True,
+        num_history_responses=5,
+        read_chat_history=True,
+        storage=observer_storage
+    )
+    return observer
