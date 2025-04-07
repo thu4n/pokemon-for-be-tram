@@ -15,11 +15,6 @@ output_dir.mkdir(parents=True, exist_ok=True)
 tmp_dir = cwd.joinpath("tmp")
 tmp_dir.mkdir(parents=True, exist_ok=True)
 
-# observer_storage = SqliteAgentStorage(
-#     table_name="pokemon_observer_data",  # Tên bảng khác
-#     db_file=str(tmp_dir.joinpath("observer_agents.db")), # File DB khác
-# )
-
 def get_agent():
     agent_storage = SqliteAgentStorage(
     table_name="pokemon_adventure_story",
@@ -66,10 +61,15 @@ def get_agent():
     )
 
     return agent
+#        model=Gemini(id="gemini-2.0-flash-lite"),
 
 def get_observer():
+    observer_storage = SqliteAgentStorage(
+    table_name="pokemon_observer_data",
+    db_file=str(tmp_dir.joinpath("observer_agents.db")),
+    )
     observer = Agent(
-        model=Gemini(id="gemini-2.0-flash"),
+        model=AzureOpenAI(id="gpt-4o-mini"),
         description=dedent("""\
         Bạn là một nhà quan sát viên chuyên theo dõi đội hình Pokémon của người chơi trong cuộc phiêu lưu.
         Bạn sẽ phân tích nội dung của câu chuyện (lời thoại của người kể chuyện) để cập nhật chính xác danh sách Pokémon hiện tại mà người chơi đang sở hữu.
@@ -113,6 +113,7 @@ def get_observer():
         add_history_to_messages=True,
         num_history_responses=5,
         read_chat_history=True,
-        storage=observer_storage
+        storage=observer_storage,
+        retries=3
     )
     return observer

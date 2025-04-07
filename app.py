@@ -23,14 +23,24 @@ async def main() -> None:
 
     with st.sidebar:
         st.markdown("# :material/list_alt: Pokemon của bạn")
-    agent = get_agent()
-    # observer = get_observer()
+    # --- Key Change: Initialize Agent ONCE per session ---
+    if "agent" not in st.session_state:
+        print("--- Initializing Agent for this session ---") # Debug print
+        st.session_state.agent = get_agent()
 
+    if "observer" not in st.session_state:
+        st.session_state.observer = get_observer()
+
+    # Use the agent stored in session state
+    agent = st.session_state.agent
+    observer = st.session_state.observer
     # Initialize chat history
     if "messages" not in st.session_state:
         st.session_state.messages = []
+
     if prompt := st.chat_input("Placeholder"):
         await add_message("user", prompt)
+
     # Display chat history
     for message in st.session_state["messages"]:
         if message["role"] in ["user", "assistant"]:
@@ -61,12 +71,14 @@ async def main() -> None:
                     await add_message("assistant", error_message)
                     st.error(error_message)
 
-            # with st.spinner("Cập nhật thông tin..."):
-            #     last_n_messages = [msg["content"] for msg in st.session_state["messages"][-5:] if "content" in msg]
-            #     last_n_str = "\n".join(last_n_messages)
-            #     observer_update = await observer.arun(last_n_str)
-            #     # print(observer_update.content)
-            #     st.sidebar.markdown(observer_update.content)
+            with st.spinner("Cập nhật thông tin..."):
+                try:
+                    observer_update = await observer.arun(response)
+                    print(observer_update.content)
+                    st.sidebar.markdown(observer_update.content)
+                except Exception as e:
+                    error_message = f"Sorry, I encountered an error: {str(e)}"
+                    st.error(error_message)
 
 if __name__ == "__main__":
     asyncio.run(main())
