@@ -2,7 +2,10 @@ import streamlit as st
 from dotenv import load_dotenv
 from typing import Any, Dict, List, Optional
 import asyncio
-from agents import get_agent, get_observer
+import nest_asyncio
+from agents import get_narrator, get_observer
+
+nest_asyncio.apply() # Allows nesting of event loops, https://github.com/pydantic/pydantic-ai/issues/748
 
 async def add_message(
     role: str, content: str, tool_calls: Optional[List[Dict[str, Any]]] = None
@@ -23,16 +26,17 @@ async def main() -> None:
 
     with st.sidebar:
         st.markdown("# :material/list_alt: Pokemon của bạn")
-    # --- Key Change: Initialize Agent ONCE per session ---
-    if "agent" not in st.session_state:
-        print("--- Initializing Agent for this session ---") # Debug print
-        st.session_state.agent = get_agent()
+
+    if "narrator" not in st.session_state:
+        print("--- Initializing narrator for this session ---")
+        st.session_state.narrator = get_narrator()
 
     if "observer" not in st.session_state:
+        print("--- Initializing observer for this session ---")
         st.session_state.observer = get_observer()
 
-    # Use the agent stored in session state
-    agent = st.session_state.agent
+    # Use the agents stored in session state
+    narrator = st.session_state.narrator
     observer = st.session_state.observer
     # Initialize chat history
     if "messages" not in st.session_state:
@@ -59,8 +63,7 @@ async def main() -> None:
             resp_container = st.empty()
             with st.spinner("Suy nghĩ..."):
                 try:
-                    # Run the agent and stream the response
-                    run_response = await agent.arun(prompt, stream=True)
+                    run_response = await narrator.arun(prompt, stream=True)
                     async for _resp_chunk in run_response:
                         if _resp_chunk.content is not None:
                             response += _resp_chunk.content
