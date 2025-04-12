@@ -4,12 +4,13 @@ from typing import Any, Dict, List, Optional
 import asyncio
 import nest_asyncio
 from agents import get_narrator, get_observer
-from utils import CUSTOM_CSS
+from utils import CUSTOM_CSS, create_pokemon_name_dict, translate_pokemon_name
 
 nest_asyncio.apply() # Allows nesting of event loops
 
 load_dotenv()
 
+### Setup streamlit UI
 st.set_page_config(page_title="PokeStory", page_icon="pokeball.png",layout="wide")
 st.title("📚 PokeStory")
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
@@ -24,6 +25,12 @@ with col2:
 with st.sidebar:
     st.markdown("# :material/list_alt: Menu")
     st.session_state.observer_output_container = st.container()
+###
+
+### Create 2 Pokemon name dicts with English as key and Japanese as key
+eng_to_jap = create_pokemon_name_dict(2,3)
+jap_to_eng = create_pokemon_name_dict(3,2)
+###
 
 async def add_message(
     role: str, content: str, tool_calls: Optional[List[Dict[str, Any]]] = None
@@ -92,7 +99,16 @@ async def main() -> None:
                                 try:
                                     observer_update = await observer.arun(response)
                                     print(observer_update.content)
-                                    st.markdown(observer_update.content)
+                                    if(observer_update.content == "Nope"):
+                                        st.markdown(observer_update.content)
+                                    else:
+                                        translated_names = []
+                                        pokemon_names = observer_update.content.strip('\n').split(',')
+                                        for name in pokemon_names:
+                                            translated_name = translate_pokemon_name(eng_to_jap, name)
+                                            translated_names.append(translated_name)
+                                        translated_names_str = ",".join(translated_names)
+                                        st.markdown(translated_names_str)
                                 except Exception as e:
                                     error_message_obs = f"Lỗi cập nhật thông tin: {str(e)}"
                                     st.error(error_message_obs)
