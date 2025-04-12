@@ -1,4 +1,5 @@
 agno==1.2.10
+aiofiles==24.1.0
 aiohappyeyeballs==2.6.1
 aiohttp==3.11.16
 aiosignal==1.3.2
@@ -46,6 +47,7 @@ packaging==24.2
 pandas==2.2.3
 pgvector==0.4.0
 pillow==11.1.0
+pokebase==1.4.1
 primp==0.14.0
 propcache==0.3.1
 protobuf==5.29.4

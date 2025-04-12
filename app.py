@@ -3,8 +3,13 @@ from dotenv import load_dotenv
 from typing import Any, Dict, List, Optional
 import asyncio
 import nest_asyncio
+import pokebase as pb
 from agents import get_narrator, get_observer
-from utils import CUSTOM_CSS, create_pokemon_name_dict, translate_pokemon_name
+from utils import CUSTOM_CSS, create_pokemon_name_dict, translate_pokemon_name, get_pokemon_info_with_sprites
+from PIL import Image
+import requests
+from io import BytesIO
+
 
 nest_asyncio.apply() # Allows nesting of event loops
 
@@ -98,17 +103,27 @@ async def main() -> None:
                             with st.spinner("Cập nhật thông tin..."):
                                 try:
                                     observer_update = await observer.arun(response)
-                                    print(observer_update.content)
                                     if(observer_update.content == "Nope"):
                                         st.markdown(observer_update.content)
                                     else:
                                         translated_names = []
                                         pokemon_names = observer_update.content.strip('\n').split(',')
                                         for name in pokemon_names:
-                                            translated_name = translate_pokemon_name(eng_to_jap, name)
+                                            clean_name = name.replace(" ", "")
+                                            translated_name = translate_pokemon_name(eng_to_jap, clean_name)
                                             translated_names.append(translated_name)
                                         translated_names_str = ",".join(translated_names)
-                                        st.markdown(translated_names_str)
+                                        print(translated_names_str)
+                                        cols = st.columns(len(translated_names))
+                                        count = 0
+                                        for name in translated_names:
+                                            eng_name = translate_pokemon_name(jap_to_eng, name)
+                                            pokemon = get_pokemon_info_with_sprites(eng_name)
+                                            img_link = pokemon['sprites']['other']['official-artwork']['front_default']
+                                            cols[count].image(image=img_link, caption=eng_to_jap[eng_name],width=55)
+                                            count += 1
+                                        count = 0
+
                                 except Exception as e:
                                     error_message_obs = f"Lỗi cập nhật thông tin: {str(e)}"
                                     st.error(error_message_obs)

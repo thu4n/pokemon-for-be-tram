@@ -1,4 +1,6 @@
 import csv
+import requests
+
 
 CUSTOM_CSS = """
     <style>
@@ -40,24 +42,29 @@ def translate_pokemon_name(pokemon_name_dict: dict, pokemon_name: str) -> str:
         translated_name = pokemon_name
     
     return translated_name
-"""
-import csv
 
-def create_pokemon_name_dict(key_col: int, val_col: int) -> dict:
-    pokemon_name_dict = {}
-    with open('data/pokemon_data.csv', mode='r', encoding='utf-8') as infile:
-        reader = csv.reader(infile)
-        header = next(reader)  # skip header
+def get_pokemon_info_with_sprites(pokemon_name_or_id):
+    """
+    Fetches information and sprites of a Pokémon from the PokéAPI.
 
-        for i, row in enumerate(reader, start=2):  # start=2 for real line number
-            limited_row = row[:4]  # read only the first 4 columns
-            if len(limited_row) > max(key_col, val_col):
-                key = limited_row[key_col].strip()
-                val = limited_row[val_col].strip()
-                pokemon_name_dict[key] = val
-            else:
-                print(f"⚠️ Skipping line {i}: Not enough columns → {row}")
+    Args:
+        pokemon_name_or_id: The name or ID of the Pokémon (string or integer).
 
-    return pokemon_name_dict
+    Returns:
+        A dictionary containing the Pokémon information (including sprites) if successful,
+        or None if an error occurred.
+    """
+    base_url = "https://pokeapi.co/api/v2/pokemon/"
+    url = f"{base_url}{pokemon_name_or_id.lower()}"
 
-"""
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        pokemon_data = response.json()
+        return pokemon_data
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching Pokémon data: {e}")
+        return None
+    except ValueError:
+        print("Error: Could not decode JSON response.")
+        return None
