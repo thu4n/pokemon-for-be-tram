@@ -10,6 +10,8 @@ from agno.vectordb.pgvector import PgVector
 from pathlib import Path
 from google.genai import types
 from prompts import *
+from pydantic import BaseModel, Field
+from typing import List
 import os
 
 
@@ -46,7 +48,6 @@ def get_narrator():
         model=Gemini(
             id="gemini-2.0-flash",
             temperature=1.2,
-            max_output_tokens=265,
             # There will be attacking and battling other Pokemons so
             # not blocking these will be better for gameplay
             safety_settings=[
@@ -74,6 +75,7 @@ def get_narrator():
         storage=agent_storage,
         knowledge=knowledge_base,
         search_knowledge=True,
+        expected_output=narrator_expected_output,
         retries=3,
     )
 

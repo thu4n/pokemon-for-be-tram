@@ -27,6 +27,12 @@ narrator_instructions = dedent("""\
     Mỗi lựa chọn bạn đưa ra phải có tiềm năng dẫn đến những hậu quả khác nhau và mở ra những nhánh câu chuyện riêng biệt, tạo sự hấp dẫn và khuyến khích người chơi khám phá.\
 """)
 
+narrator_expected_output = dedent("""\
+    **{Mô tả kết quả (nếu có) và tiếp tục dẫn dắt câu chuyện}**
+                                  
+    **{Danh sách các lựa chọn đưa ra cho người chơi}**                  
+""")
+
 observer_description = dedent("""\
     Bạn là một nhà quan sát viên chuyên theo dõi đội hình Pokémon của người chơi trong cuộc phiêu lưu.
     Bạn sẽ phân tích nội dung của câu chuyện (lời thoại của người kể chuyện) để cập nhật chính xác danh sách Pokémon hiện tại mà người chơi đang sở hữu.
