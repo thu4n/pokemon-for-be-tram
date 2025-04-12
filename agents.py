@@ -46,6 +46,7 @@ def get_narrator():
         model=Gemini(
             id="gemini-2.0-flash",
             temperature=1.2,
+            max_output_tokens=265,
             # There will be attacking and battling other Pokemons so
             # not blocking these will be better for gameplay
             safety_settings=[
@@ -95,6 +96,8 @@ def get_observer():
         num_history_responses=5,
         read_chat_history=True,
         storage=observer_storage,
+        knowledge=knowledge_base,
         retries=3,
+        expected_output=obseserver_expected_output
     )
     return observer
