@@ -66,6 +66,12 @@ async def main() -> None:
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
+    # Initialize session state for storing Pokemon names
+    if 'pokemon_names_str' not in st.session_state:
+        st.session_state.pokemon_names_str = ""
+    if 'translated_names' not in st.session_state:
+        st.session_state.translated_names = []
+
     with col1:
         with tab1:
             current_container = st.container()
@@ -104,25 +110,18 @@ async def main() -> None:
                                 try:
                                     observer_update = await observer.arun(response)
                                     if(observer_update.content == "Nope"):
-                                        st.markdown(observer_update.content)
-                                    else:
-                                        translated_names = []
+                                        # If observer returns "Nope", clear or show no info
+                                        st.session_state.pokemon_names_str = ""
+                                        st.session_state.translated_names = []
+                                    elif st.session_state.pokemon_names_str != observer_update.content:
+                                        # Update if the list of names has changed
+                                        st.session_state.pokemon_names_str = observer_update.content
                                         pokemon_names = observer_update.content.strip('\n').split(',')
+                                        st.session_state.translated_names = [] # Clear previous translated names
                                         for name in pokemon_names:
                                             clean_name = name.replace(" ", "")
                                             translated_name = translate_pokemon_name(eng_to_jap, clean_name)
-                                            translated_names.append(translated_name)
-                                        translated_names_str = ",".join(translated_names)
-                                        print(translated_names_str)
-                                        cols = st.columns(len(translated_names))
-                                        count = 0
-                                        for name in translated_names:
-                                            eng_name = translate_pokemon_name(jap_to_eng, name)
-                                            pokemon = get_pokemon_info_with_sprites(eng_name)
-                                            img_link = pokemon['sprites']['other']['official-artwork']['front_default']
-                                            cols[count].image(image=img_link, caption=eng_to_jap[eng_name],width=55)
-                                            count += 1
-                                        count = 0
+                                            st.session_state.translated_names.append(translated_name)
 
                                 except Exception as e:
                                     error_message_obs = f"Lỗi cập nhật thông tin: {str(e)}"
@@ -151,6 +150,23 @@ async def main() -> None:
                     if _content is not None:
                         with messages_container_full.chat_message(message["role"]):
                             st.markdown(_content)
+    with col2:
+        if st.session_state.translated_names:
+            num_cols = 3
+            for i, jap_name in enumerate(st.session_state.translated_names):
+                # Check if it's the start of a new row (index 0, 3, 6, ...)
+                if i % num_cols == 0:
+                    # Create a new set of columns for this row
+                    cols = st.columns(num_cols)
+                col_index = i % num_cols
+                try:
+                    eng_name = translate_pokemon_name(jap_to_eng, jap_name)
+                    pokemon = get_pokemon_info_with_sprites(eng_name)
+                    img_link = pokemon['sprites']['other']['official-artwork']['front_default']
+                    cols[col_index].image(image=img_link, caption=eng_to_jap[eng_name],width=65)
+                except Exception as e:
+                    with cols[col_index]:
+                        st.error(f"Lỗi fetch API: {jap_name}: {e}")
 
 if __name__ == "__main__":
     asyncio.run(main())
